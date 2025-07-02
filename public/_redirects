@@ -1,0 +1,18 @@
+# Netlify redirects file for Single Page Application (SPA)
+# This redirects all routes to index.html so React Router can handle them
+
+# Handle all routes by redirecting to index.html
+/*    /index.html   200
+
+# Optional: Redirect API calls to your backend (if needed)
+# /api/*  https://koraihealth-backend-1.onrender.com/api/v1/:splat  200
+
+# Optional: Handle specific file extensions (images, fonts, etc.)
+# These will serve the actual files if they exist
+/*.js    /static/js/:splat   200
+/*.css   /static/css/:splat  200
+/*.png   /static/media/:splat 200
+/*.jpg   /static/media/:splat 200
+/*.jpeg  /static/media/:splat 200
+/*.svg   /static/media/:splat 200
+/*.ico   /:splat 200
