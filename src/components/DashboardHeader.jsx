@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const DashboardHeader = () => {
   return (
@@ -19,9 +20,11 @@ const DashboardHeader = () => {
           </div>
 
           {/* Upload New Report Button */}
-          <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            Upload New Report
-          </button>
+          <Link to="/">
+            <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              Upload New Report
+            </button>
+          </Link>
         </div>
       </div>
 
