@@ -1,11 +1,48 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import DropZone from '../components/DropZone';
 import Navbar from '../components/Navbar';
 
 const Home = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const handleFileSelect = (file) => {
     console.log('Selected file:', file);
-    // Handle the selected file here - upload to server, process, etc.
+    
+    // If user is not authenticated, show toast and redirect to login
+    if (!isAuthenticated) {
+      toast.warning('Please login first to upload and analyze your lab reports.', {
+        position: "top-center",
+        autoClose: 4000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      
+      navigate('/login', { 
+        state: { 
+          from: { pathname: '/dashboard' },
+          message: 'Please sign in to upload and analyze your lab reports.'
+        } 
+      });
+      return;
+    }
+    
+    // If authenticated, show success toast and process the file
+    toast.success('File uploaded successfully! Analyzing your lab report...', {
+      position: "top-center",
+      autoClose: 3000,
+    });
+    
+    // Here you would typically upload the file to your backend
+    // For now, we'll just navigate to the dashboard after a short delay
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 1500);
   };
 
   return (
