@@ -39,27 +39,27 @@ const HealthParametersTable = () => {
       const response = await labReportService.getHealthDashboard();
       
       if (response.success && response.data) {
-        // Check if we have latestParameters (from real backend) or empty fallback data
-        if (response.data.latestParameters && response.data.latestParameters.length > 0) {
+        // Check if we have recentParameters (from real backend)
+        if (response.data.recentParameters && response.data.recentParameters.length > 0) {
           // Transform backend data to match frontend format
-          const transformedData = response.data.latestParameters.map(param => ({
-            parameter: param.name,
-            value: param.value.toFixed(2),
-            unit: param.unit,
+          const transformedData = response.data.recentParameters.map(param => ({
+            parameter: param.parameterName || param.name,
+            value: typeof param.value === 'number' ? param.value.toFixed(2) : param.value,
+            unit: param.unit || '',
             referenceRange: param.referenceRange?.text || 
                            (param.referenceRange?.min && param.referenceRange?.max 
                              ? `${param.referenceRange.min}-${param.referenceRange.max}` 
-                             : 'N/A'),
+                             : param.normalRange || 'N/A'),
             status: formatStatus(param.status),
             category: formatCategory(param.category),
             trend: 'stable', // Could be enhanced with historical data
-            date: new Date(param.createdAt).toLocaleDateString(),
-            reportId: param.reportId
+            date: new Date(param.createdAt || param.uploadDate || Date.now()).toLocaleDateString(),
+            reportId: param.reportId || param._id
           }));
           
           setHealthData(transformedData);
         } else {
-          // No parameters available (either from fallback or empty real response)
+          // No parameters available
           setHealthData([]);
         }
       } else {

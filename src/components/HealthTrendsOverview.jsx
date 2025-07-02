@@ -18,7 +18,7 @@ const HealthTrendsOverview = () => {
       const response = await labReportService.getHealthTrends(null, selectedPeriod);
       
       if (response.success && response.data) {
-        // Check if we have trendData (from real backend) or empty fallback data
+        // Check if we have trendData (from real backend)
         if (response.data.trendData && Object.keys(response.data.trendData).length > 0) {
           // Transform backend trend data to match frontend format
           const transformedTrends = Object.entries(response.data.trendData).map(([paramName, dataPoints]) => {
