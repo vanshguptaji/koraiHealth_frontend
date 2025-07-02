@@ -3,6 +3,7 @@ import DashboardHeader from '../components/DashboardHeader';
 import HealthParametersTable from '../components/HealthParametersTable';
 import AIHealthInsights from '../components/AIHealthInsights';
 import HealthTrendsOverview from '../components/HealthTrendsOverview';
+import FileUploadHistory from '../components/FileUploadHistory';
 
 const Dashboard = () => {
   return (
@@ -28,6 +29,9 @@ const Dashboard = () => {
               <HealthTrendsOverview />
             </div>
           </div>
+
+          {/* File Upload History */}
+          <FileUploadHistory />
         </div>
       </div>
     </div>

@@ -8,13 +8,21 @@ const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    toast.info('You have been successfully logged out. See you next time!', {
-      position: "top-center",
-      autoClose: 3000,
-    });
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.info('You have been successfully logged out. See you next time!', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+      navigate('/');
+    } catch (error) {
+      console.log('Logout error:', error);
+      toast.error('Logout failed. Please try again.', {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    }
   };
 
   return (

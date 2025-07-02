@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/authService';
 import Navbar from '../components/Navbar';
 
 const Login = ({ initialState = 'Login' }) => {
@@ -30,54 +31,74 @@ const Login = ({ initialState = 'Login' }) => {
     
     try {
       if (currentState === 'Sign Up') {
-        // Simulate API call for registration
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Mock successful registration
-        const userData = { 
-          name, 
+        // Call register API
+        const response = await authAPI.register({
+          name,
           email,
-          id: Date.now() // Mock user ID
-        };
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        
-        login(userData, mockToken);
-        
-        toast.success('Account created successfully! Welcome to Korai Health!', {
-          position: "top-center",
-          autoClose: 3000,
+          password
         });
         
-        // Navigate to dashboard or intended page
-        const from = location.state?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
+        if (response.success) {
+          const userData = response.data;
+          // After successful registration, automatically log in
+          const loginResponse = await authAPI.login({ email, password });
+          
+          if (loginResponse.success) {
+            const { user: loggedInUser, accessToken, refreshToken } = loginResponse.data;
+            login(loggedInUser, accessToken, refreshToken);
+            
+            toast.success('Account created successfully! Welcome to Korai Health!', {
+              position: "top-center",
+              autoClose: 3000,
+            });
+            
+            // Navigate to dashboard or intended page
+            const from = location.state?.from?.pathname || '/dashboard';
+            navigate(from, { replace: true });
+          }
+        }
         
       } else {
-        // Simulate API call for login
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Call login API
+        const response = await authAPI.login({ email, password });
         
-        // Mock successful login (you can add validation here)
-        const userData = { 
-          name: 'User', 
-          email,
-          id: Date.now()
-        };
-        const mockToken = 'mock_jwt_token_' + Date.now();
-        
-        login(userData, mockToken);
-        
-        toast.success('Welcome back! You have been successfully logged in.', {
-          position: "top-center",
-          autoClose: 3000,
-        });
-        
-        // Navigate to dashboard or intended page
-        const from = location.state?.from?.pathname || '/dashboard';
-        navigate(from, { replace: true });
+        if (response.success) {
+          const { user: loggedInUser, accessToken, refreshToken } = response.data;
+          login(loggedInUser, accessToken, refreshToken);
+          
+          toast.success('Welcome back! You have been successfully logged in.', {
+            position: "top-center",
+            autoClose: 3000,
+          });
+          
+          // Navigate to dashboard or intended page
+          const from = location.state?.from?.pathname || '/dashboard';
+          navigate(from, { replace: true });
+        }
       }
     } catch (error) {
       console.log('Authentication error:', error);
-      toast.error('Authentication failed. Please try again.', {
+      
+      // Handle specific error messages from backend
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Handle specific error cases
+      if (error.response?.status === 409) {
+        errorMessage = 'User with this email already exists. Please try logging in instead.';
+        setCurrentState('Login'); // Switch to login mode
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Invalid email or password. Please check your credentials.';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Please fill in all required fields correctly.';
+      }
+      
+      toast.error(errorMessage, {
         position: "top-center",
         autoClose: 4000,
       });

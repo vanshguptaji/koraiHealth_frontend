@@ -1,13 +1,15 @@
 import React, { useState, useCallback } from 'react';
 
-const DropZone = ({ onFileSelect }) => {
+const DropZone = ({ onFileSelect, uploading = false, uploadProgress = 0 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
-    setIsDragOver(true);
-  }, []);
+    if (!uploading) {
+      setIsDragOver(true);
+    }
+  }, [uploading]);
 
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
@@ -18,6 +20,8 @@ const DropZone = ({ onFileSelect }) => {
     e.preventDefault();
     setIsDragOver(false);
     
+    if (uploading) return;
+    
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
@@ -26,9 +30,11 @@ const DropZone = ({ onFileSelect }) => {
         onFileSelect(file);
       }
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, uploading]);
 
   const handleFileInput = useCallback((e) => {
+    if (uploading) return;
+    
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
@@ -36,10 +42,12 @@ const DropZone = ({ onFileSelect }) => {
         onFileSelect(file);
       }
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, uploading]);
 
   const handleBrowseClick = () => {
-    document.getElementById('file-input').click();
+    if (!uploading) {
+      document.getElementById('file-input').click();
+    }
   };
 
   return (
@@ -77,13 +85,32 @@ const DropZone = ({ onFileSelect }) => {
 
         {/* Main Text */}
         <div className="mb-4">
-          <p className="text-lg text-gray-700 mb-2">
-            Choose a file or drag it here
-          </p>
-          {selectedFile && (
-            <p className="text-sm text-green-600 font-medium">
-              Selected: {selectedFile.name}
-            </p>
+          {uploading ? (
+            <div className="space-y-3">
+              <p className="text-lg text-blue-600 font-medium">
+                Uploading and analyzing...
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600">
+                {uploadProgress}% complete
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-lg text-gray-700 mb-2">
+                Choose a file or drag it here
+              </p>
+              {selectedFile && (
+                <p className="text-sm text-green-600 font-medium">
+                  Selected: {selectedFile.name}
+                </p>
+              )}
+            </>
           )}
         </div>
 
@@ -95,9 +122,14 @@ const DropZone = ({ onFileSelect }) => {
         {/* Browse Files Button */}
         <button
           onClick={handleBrowseClick}
-          className="px-6 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={uploading}
+          className={`px-6 py-3 border border-gray-300 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            uploading 
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+              : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+          }`}
         >
-          Browse Files
+          {uploading ? 'Processing...' : 'Browse Files'}
         </button>
 
         {/* Hidden File Input */}

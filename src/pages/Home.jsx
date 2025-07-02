@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import DropZone from '../components/DropZone';
 import Navbar from '../components/Navbar';
+import labReportService from '../services/labReportService';
 
 const Home = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const handleFileSelect = (file) => {
+  const handleFileSelect = async (file) => {
     console.log('Selected file:', file);
     
     // If user is not authenticated, show toast and redirect to login
@@ -31,18 +34,88 @@ const Home = () => {
       });
       return;
     }
+
+    // Validate file size (10MB limit)
+    const maxSizeInMB = 10;
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
     
-    // If authenticated, show success toast and process the file
-    toast.success('File uploaded successfully! Analyzing your lab report...', {
-      position: "top-center",
-      autoClose: 3000,
-    });
+    if (file.size > maxSizeInBytes) {
+      toast.error(`File size must be less than ${maxSizeInMB}MB`, {
+        position: "top-center",
+        autoClose: 4000,
+      });
+      return;
+    }
+
+    // Validate file type
+    const supportedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/bmp',
+      'image/tiff',
+      'image/webp'
+    ];
+
+    if (!supportedTypes.includes(file.type)) {
+      toast.error('Please upload a supported file type (PDF, PNG, JPG, JPEG, WEBP)', {
+        position: "top-center",
+        autoClose: 4000,
+      });
+      return;
+    }
     
-    // Here you would typically upload the file to your backend
-    // For now, we'll just navigate to the dashboard after a short delay
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1500);
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      
+      // Show upload start toast
+      toast.info('Uploading and analyzing your lab report...', {
+        position: "top-center",
+        autoClose: 2000,
+      });
+
+      // Upload file with progress tracking
+      const result = await labReportService.uploadLabReport(file, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      if (result.success) {
+        // Show success message based on extraction results
+        if (result.data.textExtractionSupported && result.data.parametersFound > 0) {
+          toast.success(`Successfully uploaded! Found ${result.data.parametersFound} health parameters.`, {
+            position: "top-center",
+            autoClose: 4000,
+          });
+        } else if (result.data.textExtractionSupported) {
+          toast.success('File uploaded successfully! Text extracted, but no health parameters found.', {
+            position: "top-center",
+            autoClose: 4000,
+          });
+        } else {
+          toast.success('File uploaded successfully! Text extraction not supported for this file type.', {
+            position: "top-center",
+            autoClose: 4000,
+          });
+        }
+
+        // Navigate to dashboard after a short delay
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload file. Please try again.', {
+        position: "top-center",
+        autoClose: 5000,
+      });
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   return (
@@ -73,7 +146,11 @@ const Home = () => {
             Drag and drop your PDF or image file, or click to browse
           </p>
           
-          <DropZone onFileSelect={handleFileSelect} />
+          <DropZone 
+            onFileSelect={handleFileSelect} 
+            uploading={uploading}
+            uploadProgress={uploadProgress}
+          />
         </div>
 
         {/* Features Section */}
