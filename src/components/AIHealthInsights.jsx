@@ -106,9 +106,22 @@ const AIHealthInsights = () => {
         } else if (response.data.recentParameters && response.data.recentParameters.length > 0) {
           // Generate insights from recentParameters if no recommendations provided
           const params = response.data.recentParameters;
-          const critical = params.filter(p => p.status === 'critical' || p.status === 'critical_high' || p.status === 'critical_low');
-          const attention = params.filter(p => p.status === 'high' || p.status === 'low' || p.status === 'abnormal');
-          const normal = params.filter(p => p.status === 'normal');
+          
+          const critical = params.filter(p => {
+            const status = p.status?.toLowerCase() || '';
+            return status.includes('critical') || status === 'critical_high' || status === 'critical_low';
+          });
+          
+          const attention = params.filter(p => {
+            const status = p.status?.toLowerCase() || '';
+            return status === 'high' || status === 'low' || status === 'abnormal' || 
+                   status === 'elevated' || status === 'decreased' || status === 'borderline';
+          });
+          
+          const normal = params.filter(p => {
+            const status = p.status?.toLowerCase() || '';
+            return status === 'normal';
+          });
           
           const transformedInsights = [];
           
@@ -201,8 +214,15 @@ const AIHealthInsights = () => {
       }
     } catch (error) {
       console.error('Error loading health insights:', error);
-      setError('Failed to load health insights');
-      toast.error('Failed to load health insights');
+      
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please try again.');
+        toast.error('Request timed out. Please try again.');
+      } else {
+        setError('Failed to load health insights');
+        toast.error('Failed to load health insights');
+      }
     } finally {
       setLoading(false);
     }

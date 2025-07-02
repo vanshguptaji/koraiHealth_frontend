@@ -24,7 +24,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout for slower Render.com hosting
 });
 
 // Request interceptor for debugging and adding auth token
@@ -36,8 +36,10 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
-    console.log('Request headers:', config.headers);
+    // Only log in development and reduce verbosity
+    if (import.meta.env.DEV) {
+      console.log(`API: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => {
@@ -49,15 +51,18 @@ api.interceptors.request.use(
 // Response interceptor for debugging and error handling
 api.interceptors.response.use(
   (response) => {
-    console.log(`Response from ${response.config.url}:`, response.data);
+    // Only log successful responses in development
+    if (import.meta.env.DEV) {
+      console.log(`API Success: ${response.config.url}`, response.data.message || 'OK');
+    }
     return response;
   },
   (error) => {
-    console.error('Response error:', error.response?.data || error.message);
+    console.error('API Error:', error.response?.data?.message || error.message);
     
     // Handle authentication errors
     if (error.response?.status === 401) {
-      console.log('Authentication error - redirecting to login');
+      console.log('Authentication error - clearing tokens');
       // Clear invalid token
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');

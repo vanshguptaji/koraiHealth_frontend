@@ -6,6 +6,7 @@ import HealthParametersTable from '../components/HealthParametersTable';
 import AIHealthInsights from '../components/AIHealthInsights';
 import HealthTrendsOverview from '../components/HealthTrendsOverview';
 import FileUploadHistory from '../components/FileUploadHistory';
+import DashboardSummary from '../components/DashboardSummary';
 
 const Dashboard = () => {
   const location = useLocation();
@@ -36,6 +37,9 @@ const Dashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
+          {/* Dashboard Summary */}
+          <DashboardSummary />
+
           {/* Health Parameters Table */}
           <HealthParametersTable key={`health-params-${location.state?.timestamp || 'default'}`} />
 
@@ -54,6 +58,9 @@ const Dashboard = () => {
 
           {/* File Upload History */}
           <FileUploadHistory key={`upload-history-${location.state?.timestamp || 'default'}`} />
+
+          {/* Dashboard Summary - New Component Added */}
+          <DashboardSummary key={`dashboard-summary-${location.state?.timestamp || 'default'}`} />
         </div>
       </div>
     </div>

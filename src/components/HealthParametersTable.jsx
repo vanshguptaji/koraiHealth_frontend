@@ -36,26 +36,46 @@ const HealthParametersTable = () => {
   const loadHealthData = async () => {
     try {
       setLoading(true);
+      setError(null); // Clear previous errors
       const response = await labReportService.getHealthDashboard();
       
       if (response.success && response.data) {
         // Check if we have recentParameters (from real backend)
         if (response.data.recentParameters && response.data.recentParameters.length > 0) {
           // Transform backend data to match frontend format
-          const transformedData = response.data.recentParameters.map(param => ({
-            parameter: param.parameterName || param.name,
-            value: typeof param.value === 'number' ? param.value.toFixed(2) : param.value,
-            unit: param.unit || '',
-            referenceRange: param.referenceRange?.text || 
-                           (param.referenceRange?.min && param.referenceRange?.max 
-                             ? `${param.referenceRange.min}-${param.referenceRange.max}` 
-                             : param.normalRange || 'N/A'),
-            status: formatStatus(param.status),
-            category: formatCategory(param.category),
-            trend: 'stable', // Could be enhanced with historical data
-            date: new Date(param.createdAt || param.uploadDate || Date.now()).toLocaleDateString(),
-            reportId: param.reportId || param._id
-          }));
+          const transformedData = response.data.recentParameters.map(param => {
+            // Handle referenceRange properly - it might be an object or string
+            let referenceRangeText = 'N/A';
+            if (param.referenceRange) {
+              if (typeof param.referenceRange === 'string') {
+                referenceRangeText = param.referenceRange;
+              } else if (typeof param.referenceRange === 'object') {
+                if (param.referenceRange.text) {
+                  referenceRangeText = param.referenceRange.text;
+                } else if (param.referenceRange.min !== undefined && param.referenceRange.max !== undefined) {
+                  referenceRangeText = `${param.referenceRange.min}-${param.referenceRange.max}`;
+                } else if (param.referenceRange.min !== undefined) {
+                  referenceRangeText = `≥${param.referenceRange.min}`;
+                } else if (param.referenceRange.max !== undefined) {
+                  referenceRangeText = `≤${param.referenceRange.max}`;
+                }
+              }
+            } else if (param.normalRange) {
+              referenceRangeText = param.normalRange;
+            }
+
+            return {
+              parameter: param.parameterName || param.name || 'Unknown Parameter',
+              value: typeof param.value === 'number' ? param.value.toFixed(2) : (param.value || 'N/A'),
+              unit: param.unit || '',
+              referenceRange: referenceRangeText,
+              status: formatStatus(param.status || 'unknown'),
+              category: formatCategory(param.category || 'other'),
+              trend: 'stable', // Could be enhanced with historical data
+              date: new Date(param.createdAt || param.uploadDate || Date.now()).toLocaleDateString(),
+              reportId: param.reportId || param._id || 'unknown'
+            };
+          });
           
           setHealthData(transformedData);
         } else {
@@ -67,26 +87,38 @@ const HealthParametersTable = () => {
       }
     } catch (error) {
       console.error('Error loading health data:', error);
-      setError('Failed to load health parameters');
-      toast.error('Failed to load health parameters');
+      
+      // Handle timeout specifically
+      if (error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please try again.');
+        toast.error('Request timed out. Please try again.');
+      } else {
+        setError('Failed to load health parameters');
+        toast.error('Failed to load health parameters');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const formatStatus = (status) => {
+    if (!status) return 'Unknown';
     const statusMap = {
       'normal': 'Normal',
       'high': 'High',
       'low': 'Low', 
       'critical_high': 'Critical High',
       'critical_low': 'Critical Low',
-      'abnormal': 'Abnormal'
+      'abnormal': 'Abnormal',
+      'elevated': 'High',
+      'decreased': 'Low',
+      'borderline': 'Borderline'
     };
-    return statusMap[status] || status;
+    return statusMap[status.toLowerCase()] || status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   const formatCategory = (category) => {
+    if (!category) return 'Other';
     const categoryMap = {
       'blood': 'Blood',
       'urine': 'Urine',
@@ -96,9 +128,12 @@ const HealthParametersTable = () => {
       'diabetes': 'Diabetes',
       'thyroid': 'Thyroid',
       'cardiac': 'Cardiac',
+      'vitamin': 'Vitamins',
+      'mineral': 'Minerals',
+      'hormone': 'Hormones',
       'other': 'Other'
     };
-    return categoryMap[category] || category;
+    return categoryMap[category.toLowerCase()] || category.charAt(0).toUpperCase() + category.slice(1);
   };
 
   // Get unique filter options from the data

@@ -18,9 +18,11 @@ const HealthTrendsOverview = () => {
       const response = await labReportService.getHealthTrends(null, selectedPeriod);
       
       if (response.success && response.data) {
-        // Check if we have trendData (from real backend)
+        console.log('HealthTrendsOverview received data:', response.data);
+        
+        // Check if we have trendData (from real backend) or raw parameters array
         if (response.data.trendData && Object.keys(response.data.trendData).length > 0) {
-          // Transform backend trend data to match frontend format
+          // Handle structured trend data
           const transformedTrends = Object.entries(response.data.trendData).map(([paramName, dataPoints]) => {
             if (dataPoints.length === 0) return null;
             
@@ -36,6 +38,54 @@ const HealthTrendsOverview = () => {
             
             const isIncreasing = currentValue > previousValue;
             const isDecreasing = currentValue < previousValue;
+            
+            return {
+              parameter: paramName,
+              currentValue: currentValue.toFixed(2),
+              trend: isIncreasing ? 'increasing' : isDecreasing ? 'decreasing' : 'stable',
+              trendPercentage: `${trendPercentage > 0 ? '+' : ''}${trendPercentage}%`,
+              color: isIncreasing ? 'green' : isDecreasing ? 'red' : 'gray',
+              chartColor: isIncreasing ? '#10B981' : isDecreasing ? '#EF4444' : '#6B7280',
+              trendIcon: isIncreasing ? '↗' : isDecreasing ? '↘' : '→',
+              unit: sortedData[sortedData.length - 1]?.unit || '',
+              dataPoints: sortedData.map(point => ({
+                date: point.date,
+                value: point.value
+              }))
+            };
+          }).filter(Boolean);
+          
+          setTrendData(transformedTrends);
+        } else if (Array.isArray(response.data)) {
+          // Handle raw parameters array - group by parameter name and create trends
+          const parameterGroups = response.data.reduce((groups, param) => {
+            const paramName = param.parameterName || param.name || 'Unknown';
+            if (!groups[paramName]) {
+              groups[paramName] = [];
+            }
+            groups[paramName].push({
+              date: param.createdAt || param.uploadDate,
+              value: typeof param.value === 'number' ? param.value : parseFloat(param.value) || 0,
+              unit: param.unit || ''
+            });
+            return groups;
+          }, {});
+          
+          const transformedTrends = Object.entries(parameterGroups).map(([paramName, dataPoints]) => {
+            if (dataPoints.length === 0) return null;
+            
+            // Sort by date to get latest value and calculate trend
+            const sortedData = dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const currentValue = sortedData[sortedData.length - 1]?.value || 0;
+            const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : currentValue;
+            
+            // Calculate trend
+            const trendPercentage = previousValue !== 0 && sortedData.length > 1
+              ? ((currentValue - previousValue) / previousValue * 100).toFixed(1)
+              : 0;
+            
+            const isIncreasing = currentValue > previousValue && sortedData.length > 1;
+            const isDecreasing = currentValue < previousValue && sortedData.length > 1;
             
             return {
               parameter: paramName,
