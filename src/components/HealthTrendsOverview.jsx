@@ -17,41 +17,49 @@ const HealthTrendsOverview = () => {
       setLoading(true);
       const response = await labReportService.getHealthTrends(null, selectedPeriod);
       
-      if (response.success && response.data.trendData) {
-        // Transform backend trend data to match frontend format
-        const transformedTrends = Object.entries(response.data.trendData).map(([paramName, dataPoints]) => {
-          if (dataPoints.length === 0) return null;
+      if (response.success && response.data) {
+        // Check if we have trendData (from real backend) or empty fallback data
+        if (response.data.trendData && Object.keys(response.data.trendData).length > 0) {
+          // Transform backend trend data to match frontend format
+          const transformedTrends = Object.entries(response.data.trendData).map(([paramName, dataPoints]) => {
+            if (dataPoints.length === 0) return null;
+            
+            // Sort by date to get latest value and calculate trend
+            const sortedData = dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
+            const currentValue = sortedData[sortedData.length - 1]?.value || 0;
+            const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : currentValue;
+            
+            // Calculate trend
+            const trendPercentage = previousValue !== 0 
+              ? ((currentValue - previousValue) / previousValue * 100).toFixed(1)
+              : 0;
+            
+            const isIncreasing = currentValue > previousValue;
+            const isDecreasing = currentValue < previousValue;
+            
+            return {
+              parameter: paramName,
+              currentValue: currentValue.toFixed(2),
+              trend: isIncreasing ? 'increasing' : isDecreasing ? 'decreasing' : 'stable',
+              trendPercentage: `${trendPercentage > 0 ? '+' : ''}${trendPercentage}%`,
+              color: isIncreasing ? 'green' : isDecreasing ? 'red' : 'gray',
+              chartColor: isIncreasing ? '#10B981' : isDecreasing ? '#EF4444' : '#6B7280',
+              trendIcon: isIncreasing ? '↗' : isDecreasing ? '↘' : '→',
+              unit: sortedData[sortedData.length - 1]?.unit || '',
+              dataPoints: sortedData.map(point => ({
+                date: point.date,
+                value: point.value
+              }))
+            };
+          }).filter(Boolean);
           
-          // Sort by date to get latest value and calculate trend
-          const sortedData = dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-          const currentValue = sortedData[sortedData.length - 1]?.value || 0;
-          const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : currentValue;
-          
-          // Calculate trend
-          const trendPercentage = previousValue !== 0 
-            ? ((currentValue - previousValue) / previousValue * 100).toFixed(1)
-            : 0;
-          
-          const isIncreasing = currentValue > previousValue;
-          const isDecreasing = currentValue < previousValue;
-          
-          return {
-            parameter: paramName,
-            currentValue: currentValue.toFixed(2),
-            trend: isIncreasing ? 'increasing' : isDecreasing ? 'decreasing' : 'stable',
-            trendPercentage: `${trendPercentage > 0 ? '+' : ''}${trendPercentage}%`,
-            color: isIncreasing ? 'green' : isDecreasing ? 'red' : 'gray',
-            chartColor: isIncreasing ? '#10B981' : isDecreasing ? '#EF4444' : '#6B7280',
-            trendIcon: isIncreasing ? '↗' : isDecreasing ? '↘' : '→',
-            unit: sortedData[sortedData.length - 1]?.unit || '',
-            dataPoints: sortedData.map(point => ({
-              date: point.date,
-              value: point.value
-            }))
-          };
-        }).filter(Boolean);
-        
-        setTrendData(transformedTrends);
+          setTrendData(transformedTrends);
+        } else {
+          // No trend data available (either from fallback or empty real response)
+          setTrendData([]);
+        }
+      } else {
+        setTrendData([]);
       }
     } catch (error) {
       console.error('Error loading trends data:', error);

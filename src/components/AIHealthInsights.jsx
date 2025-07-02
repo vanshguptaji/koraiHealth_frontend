@@ -17,90 +17,100 @@ const AIHealthInsights = () => {
       setLoading(true);
       const response = await labReportService.getHealthDashboard();
       
-      if (response.success && response.data.recommendations) {
-        const recs = response.data.recommendations;
-        setRecommendations(recs);
-        
-        // Transform recommendations into insights format
-        const transformedInsights = [];
-        
-        // Critical insights
-        if (recs.critical && recs.critical.length > 0) {
+      if (response.success && response.data) {
+        // Check if we have recommendations (from real backend) or empty fallback data
+        if (response.data.recommendations) {
+          const recs = response.data.recommendations;
+          setRecommendations(recs);
+          
+          // Transform recommendations into insights format
+          const transformedInsights = [];
+          
+          // Critical insights
+          if (recs.critical && recs.critical.length > 0) {
+            transformedInsights.push({
+              type: 'critical',
+              title: 'Critical Parameters',
+              count: recs.critical.length,
+              description: `${recs.critical.length} parameter(s) require immediate attention.`,
+              recommendation: 'Seek immediate medical consultation.',
+              parameters: recs.critical,
+              color: 'red',
+              icon: (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )
+            });
+          }
+
+          // Attention needed insights
+          if (recs.attention && recs.attention.length > 0) {
+            transformedInsights.push({
+              type: 'elevated',
+              title: 'Elevated Parameters',
+              count: recs.attention.length,
+              description: `${recs.attention.length} parameter(s) are above normal range.`,
+              recommendation: 'Consider lifestyle modifications and follow up with your doctor.',
+              parameters: recs.attention,
+              color: 'orange',
+              icon: (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )
+            });
+          }
+
+          // Normal parameters
+          if (recs.normal && recs.normal.length > 0) {
+            transformedInsights.push({
+              type: 'positive',
+              title: 'Normal Parameters',
+              count: recs.normal.length,
+              description: `${recs.normal.length} parameter(s) are within normal range.`,
+              recommendation: 'Continue maintaining healthy lifestyle.',
+              parameters: recs.normal,
+              color: 'green',
+              icon: (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )
+            });
+          }
+
+          // Health score based on normal vs abnormal parameters
+          const totalParams = response.data.latestParameters?.length || 0;
+          const normalParams = recs.normal?.length || 0;
+          const healthScore = totalParams > 0 ? Math.round((normalParams / totalParams) * 100) : 0;
+          
           transformedInsights.push({
-            type: 'critical',
-            title: 'Critical Parameters',
-            count: recs.critical.length,
-            description: `${recs.critical.length} parameter(s) require immediate attention.`,
-            recommendation: 'Seek immediate medical consultation.',
-            parameters: recs.critical,
-            color: 'red',
+            type: 'score',
+            title: `Health Score: ${healthScore}%`,
+            count: normalParams,
+            description: `${normalParams} out of ${totalParams} parameters are normal.`,
+            recommendation: healthScore >= 70 
+              ? 'Great job! Keep maintaining your healthy lifestyle.'
+              : 'Focus on improving abnormal parameters with medical guidance.',
+            parameters: [],
+            color: healthScore >= 70 ? 'green' : healthScore >= 50 ? 'orange' : 'red',
             icon: (
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 7.707 12.379a1 1 0 101.414 1.414l3.5-3.5a1 1 0 000-1.414z" clipRule="evenodd" />
               </svg>
             )
           });
+
+          setInsights(transformedInsights);
+        } else {
+          // No recommendations available (either from fallback or empty real response)
+          setInsights([]);
+          setRecommendations(null);
         }
-
-        // Attention needed insights
-        if (recs.attention && recs.attention.length > 0) {
-          transformedInsights.push({
-            type: 'elevated',
-            title: 'Elevated Parameters',
-            count: recs.attention.length,
-            description: `${recs.attention.length} parameter(s) are above normal range.`,
-            recommendation: 'Consider lifestyle modifications and follow up with your doctor.',
-            parameters: recs.attention,
-            color: 'orange',
-            icon: (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            )
-          });
-        }
-
-        // Normal parameters
-        if (recs.normal && recs.normal.length > 0) {
-          transformedInsights.push({
-            type: 'positive',
-            title: 'Normal Parameters',
-            count: recs.normal.length,
-            description: `${recs.normal.length} parameter(s) are within normal range.`,
-            recommendation: 'Continue maintaining healthy lifestyle.',
-            parameters: recs.normal,
-            color: 'green',
-            icon: (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            )
-          });
-        }
-
-        // Health score based on normal vs abnormal parameters
-        const totalParams = response.data.latestParameters?.length || 0;
-        const normalParams = recs.normal?.length || 0;
-        const healthScore = totalParams > 0 ? Math.round((normalParams / totalParams) * 100) : 0;
-        
-        transformedInsights.push({
-          type: 'score',
-          title: `Health Score: ${healthScore}%`,
-          count: normalParams,
-          description: `${normalParams} out of ${totalParams} parameters are normal.`,
-          recommendation: healthScore >= 70 
-            ? 'Great job! Keep maintaining your healthy lifestyle.'
-            : 'Focus on improving abnormal parameters with medical guidance.',
-          parameters: [],
-          color: healthScore >= 70 ? 'green' : healthScore >= 50 ? 'orange' : 'red',
-          icon: (
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 7.707 12.379a1 1 0 101.414 1.414l3.5-3.5a1 1 0 000-1.414z" clipRule="evenodd" />
-            </svg>
-          )
-        });
-
-        setInsights(transformedInsights);
+      } else {
+        setInsights([]);
+        setRecommendations(null);
       }
     } catch (error) {
       console.error('Error loading health insights:', error);

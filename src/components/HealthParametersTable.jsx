@@ -38,24 +38,32 @@ const HealthParametersTable = () => {
       setLoading(true);
       const response = await labReportService.getHealthDashboard();
       
-      if (response.success && response.data.latestParameters) {
-        // Transform backend data to match frontend format
-        const transformedData = response.data.latestParameters.map(param => ({
-          parameter: param.name,
-          value: param.value.toFixed(2),
-          unit: param.unit,
-          referenceRange: param.referenceRange?.text || 
-                         (param.referenceRange?.min && param.referenceRange?.max 
-                           ? `${param.referenceRange.min}-${param.referenceRange.max}` 
-                           : 'N/A'),
-          status: formatStatus(param.status),
-          category: formatCategory(param.category),
-          trend: 'stable', // Could be enhanced with historical data
-          date: new Date(param.createdAt).toLocaleDateString(),
-          reportId: param.reportId
-        }));
-        
-        setHealthData(transformedData);
+      if (response.success && response.data) {
+        // Check if we have latestParameters (from real backend) or empty fallback data
+        if (response.data.latestParameters && response.data.latestParameters.length > 0) {
+          // Transform backend data to match frontend format
+          const transformedData = response.data.latestParameters.map(param => ({
+            parameter: param.name,
+            value: param.value.toFixed(2),
+            unit: param.unit,
+            referenceRange: param.referenceRange?.text || 
+                           (param.referenceRange?.min && param.referenceRange?.max 
+                             ? `${param.referenceRange.min}-${param.referenceRange.max}` 
+                             : 'N/A'),
+            status: formatStatus(param.status),
+            category: formatCategory(param.category),
+            trend: 'stable', // Could be enhanced with historical data
+            date: new Date(param.createdAt).toLocaleDateString(),
+            reportId: param.reportId
+          }));
+          
+          setHealthData(transformedData);
+        } else {
+          // No parameters available (either from fallback or empty real response)
+          setHealthData([]);
+        }
+      } else {
+        setHealthData([]);
       }
     } catch (error) {
       console.error('Error loading health data:', error);

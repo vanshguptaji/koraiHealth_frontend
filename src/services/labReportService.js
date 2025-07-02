@@ -6,7 +6,7 @@ class LabReportService {
   async uploadLabReport(file, onProgress = null) {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('labReport', file);
 
       console.log('Uploading file:', {
         name: file.name,
@@ -49,6 +49,13 @@ class LabReportService {
       return response.data;
     } catch (error) {
       console.error('Error fetching lab reports:', error);
+      
+      // Handle 404 specifically - backend route not implemented yet
+      if (error.response?.status === 404) {
+        console.warn('Lab reports endpoint not implemented on backend yet');
+        return { success: true, data: [] }; // Return empty array as fallback
+      }
+      
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }
@@ -92,11 +99,18 @@ class LabReportService {
       if (parameterName) params.append('parameterName', parameterName);
       params.append('days', days.toString());
 
-      const response = await api.get(`/lab-reports/health/trends?${params.toString()}`);
+      const response = await api.get(`/lab-reports/trends?${params.toString()}`);
       console.log('Health trends fetched:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching health trends:', error);
+      
+      // Handle 404 - backend endpoint not implemented yet
+      if (error.response?.status === 404) {
+        console.warn('Health trends endpoint not implemented on backend yet');
+        return { success: true, data: [], trends: [] }; // Return empty trends as fallback
+      }
+      
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }
@@ -107,11 +121,27 @@ class LabReportService {
   // Get health dashboard data
   async getHealthDashboard() {
     try {
-      const response = await api.get('/lab-reports/health/dashboard');
+      const response = await api.get('/lab-reports/dashboard');
       console.log('Health dashboard data fetched:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching health dashboard:', error);
+      
+      // Handle 404 - backend endpoint not implemented yet
+      if (error.response?.status === 404) {
+        console.warn('Health dashboard endpoint not implemented on backend yet');
+        return { 
+          success: true, 
+          data: {
+            totalReports: 0,
+            parametersAnalyzed: 0,
+            trendsAvailable: 0,
+            lastUpload: null,
+            recentInsights: []
+          }
+        }; // Return empty dashboard data as fallback
+      }
+      
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }
