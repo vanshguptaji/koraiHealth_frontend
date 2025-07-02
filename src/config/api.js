@@ -20,7 +20,6 @@ export const API_ENDPOINTS = {
 // Create axios instance with default configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: true, // Important for cookies
   headers: {
     'Content-Type': 'application/json',
   },
@@ -35,11 +34,6 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Disable caching to ensure fresh data for each user
-    config.headers['Cache-Control'] = 'no-cache';
-    config.headers['Pragma'] = 'no-cache';
-    config.headers['Expires'] = '0';
     
     // Only log in development and reduce verbosity
     if (import.meta.env.DEV) {
