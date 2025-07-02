@@ -83,28 +83,20 @@ const Home = () => {
       });
 
       if (result.success) {
-        // Show success message based on extraction results
-        if (result.data.textExtractionSupported && result.data.parametersFound > 0) {
-          toast.success(`Successfully uploaded! Found ${result.data.parametersFound} health parameters.`, {
-            position: "top-center",
-            autoClose: 4000,
-          });
-        } else if (result.data.textExtractionSupported) {
-          toast.success('File uploaded successfully! Text extracted, but no health parameters found.', {
-            position: "top-center",
-            autoClose: 4000,
-          });
-        } else {
-          toast.success('File uploaded successfully! Text extraction not supported for this file type.', {
-            position: "top-center",
-            autoClose: 4000,
-          });
-        }
+        // Show immediate success toast
+        toast.success('Upload successful! Redirecting to your dashboard...', {
+          position: "top-center",
+          autoClose: 1500,
+        });
 
-        // Navigate to dashboard after a short delay
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
+        // Navigate to dashboard immediately with upload result data
+        navigate('/dashboard', { 
+          state: { 
+            uploadSuccess: true,
+            uploadResult: result.data,
+            timestamp: Date.now()
+          } 
+        });
       }
     } catch (error) {
       console.error('Upload error:', error);

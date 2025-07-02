@@ -8,7 +8,7 @@ app.use(cors({
         'http://localhost:5173',
         'http://localhost:5174', 
         'http://localhost:3000',
-        process.env.FRONTEND_URL || 'http://localhost:5174'
+        process.env.FRONTEND_URL || 'http://localhost:5173'
     ],
     credentials: true,
     optionsSuccessStatus: 200,
@@ -20,8 +20,8 @@ app.use(cors({
 ## Update your .env file in backend:
 
 ```
-CORS_ORIGIN=http://localhost:5174
-FRONTEND_URL=http://localhost:5174
+CORS_ORIGIN=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
 PORT=8001
 ```
 
