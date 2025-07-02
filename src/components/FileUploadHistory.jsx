@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import labReportService from '../services/labReportService';
 import { toast } from 'react-toastify';
 
 const FileUploadHistory = () => {
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Clear previous data when user changes
+    setFiles([]);
+    setError(null);
     loadFiles();
-  }, []);
+  }, [user?._id]); // Add user._id as dependency
 
   const loadFiles = async () => {
     try {

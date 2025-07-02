@@ -36,6 +36,11 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // Disable caching to ensure fresh data for each user
+    config.headers['Cache-Control'] = 'no-cache';
+    config.headers['Pragma'] = 'no-cache';
+    config.headers['Expires'] = '0';
+    
     // Only log in development and reduce verbosity
     if (import.meta.env.DEV) {
       console.log(`API: ${config.method?.toUpperCase()} ${config.url}`);

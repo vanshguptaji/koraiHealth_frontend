@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import labReportService from '../services/labReportService';
 import { toast } from 'react-toastify';
 
 const HealthParametersTable = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('All');
   const [healthData, setHealthData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +14,9 @@ const HealthParametersTable = () => {
   const [isNewData, setIsNewData] = useState(false);
 
   useEffect(() => {
+    // Clear previous data when user changes
+    setHealthData([]);
+    setError(null);
     loadHealthData();
     
     // Check if this is a fresh load from upload
@@ -31,7 +36,7 @@ const HealthParametersTable = () => {
       // Remove the highlight after 3 seconds
       setTimeout(() => setIsNewData(false), 3000);
     }
-  }, [location.state]);
+  }, [location.state, user?._id]); // Add user._id as dependency
 
   const loadHealthData = async () => {
     try {

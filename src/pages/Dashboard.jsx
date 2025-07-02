@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 import DashboardHeader from '../components/DashboardHeader';
 import HealthParametersTable from '../components/HealthParametersTable';
 import AIHealthInsights from '../components/AIHealthInsights';
@@ -10,6 +11,7 @@ import DashboardSummary from '../components/DashboardSummary';
 
 const Dashboard = () => {
   const location = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Check if we're coming from a successful upload
@@ -38,26 +40,26 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* Dashboard Summary */}
-          <DashboardSummary />
+          <DashboardSummary key={`summary-${user?._id || 'guest'}`} />
 
           {/* Health Parameters Table */}
-          <HealthParametersTable key={`health-params-${location.state?.timestamp || 'default'}`} />
+          <HealthParametersTable key={`health-params-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
 
           {/* Two Column Layout for Insights and Trends */}
           <div className="grid lg:grid-cols-2 gap-8">
             {/* AI Health Insights */}
             <div>
-              <AIHealthInsights key={`ai-insights-${location.state?.timestamp || 'default'}`} />
+              <AIHealthInsights key={`ai-insights-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
             </div>
 
             {/* Health Trends Overview */}
             <div>
-              <HealthTrendsOverview key={`health-trends-${location.state?.timestamp || 'default'}`} />
+              <HealthTrendsOverview key={`health-trends-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
             </div>
           </div>
 
           {/* File Upload History */}
-          <FileUploadHistory key={`upload-history-${location.state?.timestamp || 'default'}`} />
+          <FileUploadHistory key={`upload-history-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
 
           {/* Dashboard Summary - New Component Added */}
           <DashboardSummary key={`dashboard-summary-${location.state?.timestamp || 'default'}`} />

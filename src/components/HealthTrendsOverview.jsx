@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import labReportService from '../services/labReportService';
 import { toast } from 'react-toastify';
 
 const HealthTrendsOverview = () => {
+  const { user } = useAuth();
   const [trendData, setTrendData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(30);
 
   useEffect(() => {
+    // Clear previous data when user changes
+    setTrendData([]);
+    setError(null);
     loadTrendsData();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, user?._id]); // Add user._id as dependency
 
   const loadTrendsData = async () => {
     try {

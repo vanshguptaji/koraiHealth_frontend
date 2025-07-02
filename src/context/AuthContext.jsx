@@ -54,6 +54,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, accessToken, refreshToken) => {
+    // Clear any existing data first
+    localStorage.clear();
+    
+    // Set new user data
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);
@@ -67,10 +71,19 @@ export const AuthProvider = ({ children }) => {
       console.log('Logout API error:', error);
       // Continue with local logout even if API fails
     } finally {
+      // Clear all localStorage data
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
+      
+      // Clear any other cached data that might persist
+      localStorage.clear();
+      
+      // Reset auth state
       setIsAuthenticated(false);
       setUser(null);
+      
+      // Force page reload to clear any component state
+      window.location.href = '/login';
     }
   };
 

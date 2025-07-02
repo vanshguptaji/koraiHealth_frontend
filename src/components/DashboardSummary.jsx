@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import labReportService from '../services/labReportService';
 
 const DashboardSummary = () => {
+  const { user } = useAuth();
   const [summaryData, setSummaryData] = useState({
     totalReports: 0,
     totalParameters: 0,
@@ -11,8 +13,15 @@ const DashboardSummary = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Clear previous data when user changes
+    setSummaryData({
+      totalReports: 0,
+      totalParameters: 0,
+      recentReports: [],
+      recentParameters: []
+    });
     loadSummaryData();
-  }, []);
+  }, [user?._id]); // Add user._id as dependency
 
   const loadSummaryData = async () => {
     try {
