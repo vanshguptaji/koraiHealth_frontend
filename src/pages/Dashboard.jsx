@@ -8,6 +8,7 @@ import AIHealthInsights from '../components/AIHealthInsights';
 import HealthTrendsOverview from '../components/HealthTrendsOverview';
 import FileUploadHistory from '../components/FileUploadHistory';
 import DashboardSummary from '../components/DashboardSummary';
+import HealthCategorySummary from '../components/HealthCategorySummary';
 
 const Dashboard = () => {
   const location = useLocation();
@@ -45,6 +46,9 @@ const Dashboard = () => {
           {/* Health Parameters Table */}
           <HealthParametersTable key={`health-params-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
 
+          {/* Health Category Summary */}
+          <HealthCategorySummary key={`health-categories-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
+
           {/* Two Column Layout for Insights and Trends */}
           <div className="grid lg:grid-cols-2 gap-8">
             {/* AI Health Insights */}
@@ -60,9 +64,6 @@ const Dashboard = () => {
 
           {/* File Upload History */}
           <FileUploadHistory key={`upload-history-${user?._id || 'guest'}-${location.state?.timestamp || 'default'}`} />
-
-          {/* Dashboard Summary - New Component Added */}
-          <DashboardSummary key={`dashboard-summary-${location.state?.timestamp || 'default'}`} />
         </div>
       </div>
     </div>

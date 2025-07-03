@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import labReportService from '../services/labReportService';
 import { toast } from 'react-toastify';
+import TrendChart from './TrendChart';
 
 const HealthTrendsOverview = () => {
   const { user } = useAuth();
@@ -25,24 +26,30 @@ const HealthTrendsOverview = () => {
       if (response.success && response.data) {
         console.log('HealthTrendsOverview received data:', response.data);
         
-        // Check if we have trendData (from real backend) or raw parameters array
-        if (response.data.trendData && Object.keys(response.data.trendData).length > 0) {
-          // Handle structured trend data
-          const transformedTrends = Object.entries(response.data.trendData).map(([paramName, dataPoints]) => {
-            if (dataPoints.length === 0) return null;
+        // Handle the new backend structure with 'parameters' and 'trends' fields
+        if (response.data.trends && Object.keys(response.data.trends).length > 0) {
+          // Transform backend trends data for display
+          const transformedTrends = Object.entries(response.data.trends).map(([paramName, dataPoints]) => {
+            if (!dataPoints || dataPoints.length === 0) return null;
             
             // Sort by date to get latest value and calculate trend
             const sortedData = dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
             const currentValue = sortedData[sortedData.length - 1]?.value || 0;
-            const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : currentValue;
+            const previousValue = sortedData.length > 1 ? sortedData[0]?.value : currentValue;
             
-            // Calculate trend
-            const trendPercentage = previousValue !== 0 
+            // Calculate trend percentage
+            const trendPercentage = previousValue !== 0 && sortedData.length > 1
               ? ((currentValue - previousValue) / previousValue * 100).toFixed(1)
               : 0;
             
-            const isIncreasing = currentValue > previousValue;
-            const isDecreasing = currentValue < previousValue;
+            const isIncreasing = currentValue > previousValue && sortedData.length > 1;
+            const isDecreasing = currentValue < previousValue && sortedData.length > 1;
+            
+            // Find parameter details from the parameters array
+            const parameterDetails = response.data.parameters?.find(p => 
+              (p.name && p.name.toLowerCase()) === paramName.toLowerCase() ||
+              (p.parameterName && p.parameterName.toLowerCase()) === paramName.toLowerCase()
+            );
             
             return {
               parameter: paramName,
@@ -53,25 +60,32 @@ const HealthTrendsOverview = () => {
               chartColor: isIncreasing ? '#10B981' : isDecreasing ? '#EF4444' : '#6B7280',
               trendIcon: isIncreasing ? '↗' : isDecreasing ? '↘' : '→',
               unit: sortedData[sortedData.length - 1]?.unit || '',
+              status: sortedData[sortedData.length - 1]?.status || 'normal',
+              category: parameterDetails?.category || 'general',
+              referenceRange: parameterDetails?.referenceRange?.text || 'N/A',
               dataPoints: sortedData.map(point => ({
-                date: point.date,
-                value: point.value
+                date: new Date(point.date).toLocaleDateString(),
+                value: point.value,
+                status: point.status
               }))
             };
           }).filter(Boolean);
           
           setTrendData(transformedTrends);
-        } else if (Array.isArray(response.data)) {
-          // Handle raw parameters array - group by parameter name and create trends
-          const parameterGroups = response.data.reduce((groups, param) => {
-            const paramName = param.parameterName || param.name || 'Unknown';
+        } else if (response.data.parameters && Array.isArray(response.data.parameters)) {
+          // Handle parameters array when no trends structure is available
+          const parameterGroups = response.data.parameters.reduce((groups, param) => {
+            const paramName = param.name || param.parameterName || 'Unknown';
             if (!groups[paramName]) {
               groups[paramName] = [];
             }
             groups[paramName].push({
               date: param.createdAt || param.uploadDate,
               value: typeof param.value === 'number' ? param.value : parseFloat(param.value) || 0,
-              unit: param.unit || ''
+              unit: param.unit || '',
+              status: param.status || 'normal',
+              category: param.category || 'general',
+              referenceRange: param.referenceRange?.text || param.referenceRange || 'N/A'
             });
             return groups;
           }, {});
@@ -79,12 +93,10 @@ const HealthTrendsOverview = () => {
           const transformedTrends = Object.entries(parameterGroups).map(([paramName, dataPoints]) => {
             if (dataPoints.length === 0) return null;
             
-            // Sort by date to get latest value and calculate trend
             const sortedData = dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
             const currentValue = sortedData[sortedData.length - 1]?.value || 0;
-            const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : currentValue;
+            const previousValue = sortedData.length > 1 ? sortedData[0]?.value : currentValue;
             
-            // Calculate trend
             const trendPercentage = previousValue !== 0 && sortedData.length > 1
               ? ((currentValue - previousValue) / previousValue * 100).toFixed(1)
               : 0;
@@ -101,16 +113,20 @@ const HealthTrendsOverview = () => {
               chartColor: isIncreasing ? '#10B981' : isDecreasing ? '#EF4444' : '#6B7280',
               trendIcon: isIncreasing ? '↗' : isDecreasing ? '↘' : '→',
               unit: sortedData[sortedData.length - 1]?.unit || '',
+              status: sortedData[sortedData.length - 1]?.status || 'normal',
+              category: sortedData[sortedData.length - 1]?.category || 'general',
+              referenceRange: sortedData[sortedData.length - 1]?.referenceRange || 'N/A',
               dataPoints: sortedData.map(point => ({
-                date: point.date,
-                value: point.value
+                date: new Date(point.date).toLocaleDateString(),
+                value: point.value,
+                status: point.status
               }))
             };
           }).filter(Boolean);
           
           setTrendData(transformedTrends);
         } else {
-          // No trend data available (either from fallback or empty real response)
+          // Fallback to sample data if no real data
           setTrendData([]);
         }
       } else {
@@ -203,113 +219,56 @@ const HealthTrendsOverview = () => {
       </div>
       
       {/* Trend Cards */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {trendData.map((item, index) => (
-          <div key={index} className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {trendData.slice(0, 4).map((item, index) => (
+          <div key={index} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">{item.parameter}</h3>
+              <h3 className="text-sm font-medium text-gray-600 capitalize">{item.parameter}</h3>
               <span className="text-lg">{item.trendIcon}</span>
             </div>
             
             <div className="mb-2">
-              <div className="text-2xl font-bold text-blue-600">{item.currentValue}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {item.currentValue}
+                <span className="text-sm font-normal text-gray-500 ml-1">{item.unit}</span>
+              </div>
             </div>
             
-            <div className="flex items-center">
+            <div className="flex items-center justify-between">
               <span className={`text-xs px-2 py-1 rounded-full ${getTrendBgColor(item.trend)} ${getTrendColor(item.trend)}`}>
                 {item.trend}
               </span>
-              <span className={`text-sm ml-2 ${getTrendColor(item.trend)}`}>
+              <span className={`text-sm font-medium ${getTrendColor(item.trend)}`}>
                 {item.trendPercentage}
               </span>
             </div>
+
+            {/* Status indicator */}
+            {item.status && (
+              <div className="mt-2 text-xs">
+                <span className={`px-2 py-1 rounded-full ${
+                  item.status === 'normal' ? 'bg-green-100 text-green-800' :
+                  item.status === 'high' ? 'bg-red-100 text-red-800' :
+                  item.status === 'low' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {item.status}
+                </span>
+              </div>
+            )}
+
+            {/* Reference range */}
+            {item.referenceRange && item.referenceRange !== 'N/A' && (
+              <div className="mt-2 text-xs text-gray-500">
+                Range: {item.referenceRange}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Chart Area */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="mb-4">
-          <div className="flex items-center space-x-4 text-sm">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-              <span className="text-gray-600">Total Cholesterol</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-              <span className="text-gray-600">HDL Cholesterol</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-              <span className="text-gray-600">Hemoglobin A1C</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Simple Chart Representation */}
-        <div className="relative h-64">
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500">
-            <span>240</span>
-            <span>180</span>
-            <span>120</span>
-            <span>60</span>
-            <span>0</span>
-          </div>
-
-          {/* Chart area */}
-          <div className="ml-8 h-full relative">
-            {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <div key={i} className="border-t border-gray-100"></div>
-              ))}
-            </div>
-
-            {/* Chart lines */}
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 240">
-              {/* Total Cholesterol line (blue) */}
-              <polyline
-                fill="none"
-                stroke="#3B82F6"
-                strokeWidth="2"
-                points="50,80 200,85 350,90"
-              />
-              <circle cx="50" cy="80" r="4" fill="#3B82F6" />
-              <circle cx="200" cy="85" r="4" fill="#3B82F6" />
-              <circle cx="350" cy="90" r="4" fill="#3B82F6" />
-
-              {/* HDL Cholesterol line (green) */}
-              <polyline
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="2"
-                points="50,160 200,155 350,150"
-              />
-              <circle cx="50" cy="160" r="4" fill="#10B981" />
-              <circle cx="200" cy="155" r="4" fill="#10B981" />
-              <circle cx="350" cy="150" r="4" fill="#10B981" />
-
-              {/* Hemoglobin A1C line (yellow) */}
-              <polyline
-                fill="none"
-                stroke="#F59E0B"
-                strokeWidth="2"
-                points="50,190 200,185 350,195"
-              />
-              <circle cx="50" cy="190" r="4" fill="#F59E0B" />
-              <circle cx="200" cy="185" r="4" fill="#F59E0B" />
-              <circle cx="350" cy="195" r="4" fill="#F59E0B" />
-            </svg>
-          </div>
-
-          {/* X-axis labels */}
-          <div className="absolute bottom-0 left-8 right-0 flex justify-between text-xs text-gray-500">
-            <span>15/01/2024</span>
-            <span>15/04/2024</span>
-          </div>
-        </div>
-      </div>
+      {/* Interactive Chart */}
+      <TrendChart trendData={trendData} selectedPeriod={selectedPeriod} />
     </div>
   );
 };
